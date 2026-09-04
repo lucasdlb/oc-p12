@@ -1,0 +1,7 @@
+[newsdata]
+query = "climate change"
+language = "en"
+category = "environment"
+country = ""
+max_pages = 1
+only_with_images = true
