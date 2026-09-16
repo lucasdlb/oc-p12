@@ -16,6 +16,9 @@ wheels/
 
 # Local configuration and generated data
 .env
+.env.airflow
+config/
+logs/
 data/raw/
 data/processed/
 

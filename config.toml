@@ -1,7 +1,48 @@
 [newsdata]
+base_url = "https://newsdata.io/api/1/news"
 query = "climate change"
 language = "en"
 category = "environment"
 country = ""
 max_pages = 1
 only_with_images = true
+validate_image_urls = false
+
+[gdelt]
+base_url = "https://api.gdeltproject.org/api/v2/doc/doc"
+query = "climate change"
+mode = "artlist"
+response_format = "json"
+max_records = 10
+sort = "datedesc"
+language = "English"
+only_with_images = true
+validate_image_urls = false
+
+[climate_fever]
+dataset_name = "tdiggelm/climate_fever"
+split = "test"
+max_records = 10
+
+[dataforgood]
+dataset_name = "DataForGood/climate-misinformation-RCoT"
+splits = ["train", "test"]
+max_records = 10
+
+[fakeddit]
+dataset_dir = "external/Fakeddit"
+files = ["multimodal_train.tsv", "multimodal_validate.tsv", "multimodal_test.tsv"]
+max_records = 10
+only_multimodal = true
+validate_image_urls = false
+
+[rss]
+feeds = [
+  "https://www.theguardian.com/environment/climate-crisis/rss",
+  "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+  "https://www.france24.com/en/tag/climate-change/rss",
+  "https://www.politifact.com/rss/factchecks/",
+]
+max_records_per_feed = 10
+only_with_images = false
+validate_image_urls = false

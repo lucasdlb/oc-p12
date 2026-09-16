@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from news_ingestion.pipeline import fetch_newsdata
+from news_ingestion.pipeline import fetch_fakeddit
 from news_ingestion.script_utils import configure_logging
 
 
 def main() -> None:
     configure_logging()
-    fetch_newsdata()
+    fetch_fakeddit()
 
 
 if __name__ == "__main__":

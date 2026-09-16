@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from news_ingestion.pipeline import fetch_newsdata
+import sys
+
+from news_ingestion.pipeline import transform_live_run
 from news_ingestion.script_utils import configure_logging
 
 
-def main() -> None:
+def main() -> int:
     configure_logging()
-    fetch_newsdata()
+    transform_live_run()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

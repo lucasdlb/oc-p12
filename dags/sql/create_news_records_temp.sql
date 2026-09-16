@@ -1,0 +1,25 @@
+DROP TABLE IF EXISTS news_records_temp;
+
+CREATE TABLE IF NOT EXISTS news_records_temp (
+    record_id TEXT PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    source_record_id TEXT,
+    title TEXT,
+    text TEXT,
+    image_url TEXT,
+    source_url TEXT,
+    published_at TEXT,
+    source_name TEXT NOT NULL,
+    extracted_from TEXT NOT NULL,
+    language TEXT,
+    country JSONB NOT NULL DEFAULT '[]'::jsonb,
+    category JSONB NOT NULL DEFAULT '[]'::jsonb,
+    label TEXT,
+    evidence_count INTEGER NOT NULL DEFAULT 0,
+    text_length INTEGER NOT NULL DEFAULT 0,
+    word_count INTEGER NOT NULL DEFAULT 0,
+    is_multimodal BOOLEAN NOT NULL DEFAULT false,
+    has_valid_image_url BOOLEAN NOT NULL DEFAULT false,
+    validation_errors JSONB NOT NULL DEFAULT '[]'::jsonb,
+    loaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
