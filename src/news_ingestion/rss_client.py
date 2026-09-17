@@ -39,12 +39,23 @@ class RssClient:
         for feed_url in self.feeds:
             try:
                 feed_payload = self._parse_feed(feed_url)
-            except Exception:
-                logger.exception("Skipping RSS feed after parse failure: %s", feed_url)
+            except Exception as exc:
+                logger.exception(
+                    "Skipping RSS feed after parse failure",
+                    extra={
+                        "source": "rss",
+                        "feed_url": feed_url,
+                        "error_type": type(exc).__name__,
+                        "error_message": str(exc),
+                    },
+                )
                 continue
 
             if feed_payload.get("bozo"):
-                logger.warning("RSS feed reported parsing issues: %s", feed_url)
+                logger.warning(
+                    "RSS feed reported parsing issues",
+                    extra={"source": "rss", "feed_url": feed_url},
+                )
 
             feed_title = self._feed_title(feed_payload, feed_url)
 
@@ -59,8 +70,8 @@ class RssClient:
                     article.image_url
                 ):
                     logger.warning(
-                        "Skipping RSS entry with inaccessible image: %s",
-                        article.link,
+                        "Skipping RSS entry with inaccessible image",
+                        extra={"source": "rss", "source_url": article.link},
                     )
                     continue
                 articles.append(article)

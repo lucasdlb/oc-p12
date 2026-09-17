@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -165,26 +166,39 @@ def transform_raw_directory(
     raw_data_dir: Path = PROJECT_ROOT / "data" / "raw" / "live",
     output_path: Path = PROJECT_ROOT / "data" / "processed" / "processed_records.json",
 ) -> list[ProcessedRecord]:
+    started_at = time.monotonic()
     processed_records: list[ProcessedRecord] = []
 
     for input_path in sorted(raw_data_dir.glob("*.json")):
         record_type = infer_record_type(input_path)
         if record_type is None:
-            logger.info("Skipping %s because record type is unknown", input_path)
+            logger.info(
+                "Skipping file because record type is unknown",
+                extra={"input_path": str(input_path)},
+            )
             continue
 
         raw_records = load_json_records(input_path)
         transformed = transform_records(raw_records, record_type)
         processed_records.extend(transformed)
         logger.info(
-            "Transformed %s %s records from %s",
-            len(transformed),
-            record_type,
-            input_path,
+            "Transformed raw records",
+            extra={
+                "input_path": str(input_path),
+                "record_type": record_type,
+                "record_count": len(transformed),
+            },
         )
 
     save_processed_records(processed_records, output_path)
-    logger.info("Saved %s processed records to %s", len(processed_records), output_path)
+    logger.info(
+        "Saved processed records",
+        extra={
+            "output_path": str(output_path),
+            "record_count": len(processed_records),
+            "duration_ms": round((time.monotonic() - started_at) * 1000),
+        },
+    )
     return processed_records
 
 

@@ -62,6 +62,16 @@ class GdeltClient:
             response.raise_for_status()
             payload = response.json()
         except requests.RequestException as exc:
+            response = getattr(exc, "response", None)
+            logger.warning(
+                "GDELT HTTP request failed",
+                extra={
+                    "source": "gdelt",
+                    "status_code": getattr(response, "status_code", None),
+                    "error_type": type(exc).__name__,
+                    "error_message": str(exc),
+                },
+            )
             msg = "GDELT HTTP request failed."
             raise RuntimeError(msg) from exc
         except ValueError as exc:
@@ -95,7 +105,8 @@ class GdeltClient:
                 valid_articles.append(article)
             else:
                 logger.warning(
-                    "Skipping article with inaccessible image: %s", article.link
+                    "Skipping article with inaccessible image",
+                    extra={"source": "gdelt", "source_url": article.link},
                 )
         return valid_articles
 

@@ -48,8 +48,11 @@ class FakedditClient:
                 article.image_url
             ):
                 logger.warning(
-                    "Skipping Fakeddit row with inaccessible image: %s",
-                    article.article_id,
+                    "Skipping Fakeddit row with inaccessible image",
+                    extra={
+                        "source": "fakeddit",
+                        "source_record_id": article.article_id,
+                    },
                 )
                 continue
 

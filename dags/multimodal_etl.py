@@ -40,22 +40,28 @@ def multimodal_news_etl():
 
     @task
     def fetch_live_sources() -> list[str]:
+        from news_ingestion.logging_config import configure_logging
         from news_ingestion.pipeline import fetch_live_sources as run_fetch_live_sources
 
+        configure_logging()
         context = get_current_context()
         return [str(path) for path in run_fetch_live_sources(context["run_id"])]
 
     @task
     def transform_live_sources() -> str:
+        from news_ingestion.logging_config import configure_logging
         from news_ingestion.pipeline import transform_live_run as run_transform_live_run
 
+        configure_logging()
         context = get_current_context()
         return str(run_transform_live_run(context["run_id"]))
 
     @task
     def load_processed_records(processed_records_path: str) -> int:
         from news_ingestion.database import load_processed_records_to_temp
+        from news_ingestion.logging_config import configure_logging
 
+        configure_logging()
         postgres_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
         conn = postgres_hook.get_conn()
         return load_processed_records_to_temp(Path(processed_records_path), conn)

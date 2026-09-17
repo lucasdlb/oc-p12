@@ -22,6 +22,5 @@ logs/
 data/raw/
 data/processed/
 
-# External repo and documentation
-docs/
+# External repos
 external/

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import logging
 import os
 import re
+import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from news_ingestion.config import Settings
+from news_ingestion.logging_config import configure_logging as configure_json_logging
 from news_ingestion.models import RawArticle, RawClaim
 from news_ingestion.storage import save_raw_articles, save_raw_claims
 
@@ -47,10 +48,7 @@ def static_processed_output_path(settings: Settings) -> Path:
 
 
 def configure_logging() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    configure_json_logging()
 
 
 def run_article_extraction(
@@ -58,11 +56,22 @@ def run_article_extraction(
     fetch: Callable[[], list[RawArticle]],
     output_path: Path,
 ) -> list[RawArticle]:
+    import logging
+
     logger = logging.getLogger(source_name)
-    logger.info("Starting article extraction")
+    started_at = time.monotonic()
+    logger.info("Starting article extraction", extra={"source": source_name})
     articles = fetch()
     save_raw_articles(articles, output_path)
-    logger.info("Saved %s articles to %s", len(articles), output_path)
+    logger.info(
+        "Saved articles",
+        extra={
+            "source": source_name,
+            "record_count": len(articles),
+            "output_path": str(output_path),
+            "duration_ms": round((time.monotonic() - started_at) * 1000),
+        },
+    )
     return articles
 
 
@@ -71,15 +80,28 @@ def run_claim_extraction(
     fetch: Callable[[], list[RawClaim]],
     output_path: Path,
 ) -> list[RawClaim]:
+    import logging
+
     logger = logging.getLogger(source_name)
-    logger.info("Starting claim extraction")
+    started_at = time.monotonic()
+    logger.info("Starting claim extraction", extra={"source": source_name})
     claims = fetch()
     save_raw_claims(claims, output_path)
-    logger.info("Saved %s claims to %s", len(claims), output_path)
+    logger.info(
+        "Saved claims",
+        extra={
+            "source": source_name,
+            "record_count": len(claims),
+            "output_path": str(output_path),
+            "duration_ms": round((time.monotonic() - started_at) * 1000),
+        },
+    )
     return claims
 
 
 def run_sources(sources: Sequence[tuple[str, Callable[[], object]]]) -> int:
+    import logging
+
     failed_sources: list[str] = []
 
     for source_name, run_source in sources:

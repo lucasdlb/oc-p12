@@ -250,6 +250,7 @@ class Settings(BaseSettings):
         default=resolve_project_path(Path("data/processed")),
         alias="PROCESSED_DATA_DIR",
     )
+    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     newsdata: NewsDataSettings = Field(default_factory=NewsDataSettings)
     gdelt: GdeltSettings = Field(default_factory=GdeltSettings)
     climate_fever: ClimateFeverSettings = Field(default_factory=ClimateFeverSettings)
@@ -317,6 +318,16 @@ class Settings(BaseSettings):
     @classmethod
     def resolve_processed_data_dir(cls, value: Path) -> Path:
         return resolve_project_path(value)
+
+    @field_validator("log_level")
+    @classmethod
+    def validate_log_level(cls, value: str) -> str:
+        log_level = value.strip().upper()
+        valid_levels = {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"}
+        if log_level not in valid_levels:
+            msg = "LOG_LEVEL must be one of CRITICAL, ERROR, WARNING, INFO, DEBUG, or NOTSET."
+            raise ValueError(msg)
+        return log_level
 
 
 @lru_cache

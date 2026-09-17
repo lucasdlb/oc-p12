@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
+import time
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 RECORD_COLUMNS = (
     "record_id",
@@ -29,6 +33,7 @@ RECORD_COLUMNS = (
 
 
 def load_processed_records_to_temp(processed_path: Path, conn: Any) -> int:
+    started_at = time.monotonic()
     records = json.loads(processed_path.read_text(encoding="utf-8"))
     if not isinstance(records, list):
         msg = f"Expected {processed_path} to contain a JSON array."
@@ -36,6 +41,10 @@ def load_processed_records_to_temp(processed_path: Path, conn: Any) -> int:
 
     rows = [_record_to_row(record) for record in records]
     if not rows:
+        logger.info(
+            "No processed records to load",
+            extra={"processed_path": str(processed_path), "record_count": 0},
+        )
         return 0
 
     query = f"""
@@ -48,6 +57,15 @@ def load_processed_records_to_temp(processed_path: Path, conn: Any) -> int:
     with conn.cursor() as cursor:
         cursor.executemany(query, rows)
     conn.commit()
+    logger.info(
+        "Loaded processed records to temp table",
+        extra={
+            "processed_path": str(processed_path),
+            "table": "news_records_temp",
+            "record_count": len(rows),
+            "duration_ms": round((time.monotonic() - started_at) * 1000),
+        },
+    )
     return len(rows)
 
 

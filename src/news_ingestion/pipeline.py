@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,19 @@ class SourceSpec:
     filename: str
     record_kind: RecordKind
     fetch_records: Callable[[Settings], list[RawArticle] | list[RawClaim]]
+
+
+@dataclass(frozen=True)
+class SourceFetchResult:
+    source: str
+    output_path: Path | None
+    record_count: int
+    duration_ms: int
+    error: str | None = None
+
+    @property
+    def succeeded(self) -> bool:
+        return self.error is None
 
 
 LIVE_SOURCES = (
@@ -99,21 +113,29 @@ def source_output_path(source: SourceSpec, raw_dir: Path) -> Path:
     return raw_dir / source.filename
 
 
-def fetch_source(source: SourceSpec, settings: Settings, raw_dir: Path) -> Path:
+def fetch_source(
+    source: SourceSpec, settings: Settings, raw_dir: Path
+) -> SourceFetchResult:
     output_path = source_output_path(source, raw_dir)
+    started_at = time.monotonic()
     if source.record_kind == "article":
-        run_article_extraction(
+        records = run_article_extraction(
             source.name,
             lambda: cast(list[RawArticle], source.fetch_records(settings)),
             output_path,
         )
     else:
-        run_claim_extraction(
+        records = run_claim_extraction(
             source.name,
             lambda: cast(list[RawClaim], source.fetch_records(settings)),
             output_path,
         )
-    return output_path
+    return SourceFetchResult(
+        source=source.name,
+        output_path=output_path,
+        record_count=len(records),
+        duration_ms=round((time.monotonic() - started_at) * 1000),
+    )
 
 
 def fetch_sources(
@@ -121,67 +143,149 @@ def fetch_sources(
     settings: Settings,
     raw_dir: Path,
     source_group: str,
+    minimum_successes: int | None = None,
 ) -> list[Path]:
-    output_paths: list[Path] = []
-    failed_sources: list[str] = []
+    minimum_successes = len(sources) if minimum_successes is None else minimum_successes
+    results: list[SourceFetchResult] = []
 
     for source in sources:
+        started_at = time.monotonic()
         try:
-            output_paths.append(fetch_source(source, settings, raw_dir))
-        except Exception:
-            logging.getLogger(source.name).exception("Extraction failed")
-            failed_sources.append(source.name)
+            results.append(fetch_source(source, settings, raw_dir))
+        except Exception as exc:
+            duration_ms = round((time.monotonic() - started_at) * 1000)
+            logging.getLogger(source.name).exception(
+                "Extraction failed",
+                extra={
+                    "source": source.name,
+                    "source_group": source_group,
+                    "duration_ms": duration_ms,
+                    "error_type": type(exc).__name__,
+                    "error_message": str(exc),
+                },
+            )
+            results.append(
+                SourceFetchResult(
+                    source=source.name,
+                    output_path=None,
+                    record_count=0,
+                    duration_ms=duration_ms,
+                    error=str(exc),
+                )
+            )
 
-    if failed_sources:
+    successful_results = [result for result in results if result.succeeded]
+    failed_results = [result for result in results if not result.succeeded]
+    output_paths = [
+        result.output_path for result in successful_results if result.output_path
+    ]
+
+    logging.getLogger(__name__).info(
+        "Extraction source summary",
+        extra={
+            "source_group": source_group,
+            "sources_total": len(sources),
+            "sources_succeeded": len(successful_results),
+            "sources_failed": len(failed_results),
+            "failed_sources": [result.source for result in failed_results],
+            "record_count": sum(result.record_count for result in successful_results),
+            "minimum_successes": minimum_successes,
+        },
+    )
+
+    if len(successful_results) < minimum_successes:
         logging.getLogger(__name__).error(
-            "Extraction completed with failed sources: %s",
-            ", ".join(failed_sources),
+            "Extraction failed below minimum success threshold",
+            extra={
+                "source_group": source_group,
+                "sources_succeeded": len(successful_results),
+                "sources_failed": len(failed_results),
+                "failed_sources": [result.source for result in failed_results],
+                "minimum_successes": minimum_successes,
+            },
         )
-        msg = f"One or more {source_group} source extractions failed."
+        msg = f"Fewer than {minimum_successes} {source_group} source extractions succeeded."
         raise RuntimeError(msg)
 
-    logging.getLogger(__name__).info("Extraction completed successfully")
+    if failed_results:
+        logging.getLogger(__name__).warning(
+            "Extraction completed with partial source failures",
+            extra={
+                "source_group": source_group,
+                "failed_sources": [result.source for result in failed_results],
+            },
+        )
+    else:
+        logging.getLogger(__name__).info(
+            "Extraction completed successfully",
+            extra={"source_group": source_group},
+        )
+
     return output_paths
 
 
 def fetch_newsdata(run_id: str | None = None, settings: Settings | None = None) -> Path:
     settings = settings or get_settings()
     raw_dir = live_raw_dir(settings, resolve_run_id(run_id))
-    return fetch_source(LIVE_SOURCES[0], settings, raw_dir)
+    result = fetch_source(LIVE_SOURCES[0], settings, raw_dir)
+    if result.output_path is None:
+        msg = "NewsData.io extraction did not produce an output path."
+        raise RuntimeError(msg)
+    return result.output_path
 
 
 def fetch_gdelt(run_id: str | None = None, settings: Settings | None = None) -> Path:
     settings = settings or get_settings()
     raw_dir = live_raw_dir(settings, resolve_run_id(run_id))
-    return fetch_source(LIVE_SOURCES[1], settings, raw_dir)
+    result = fetch_source(LIVE_SOURCES[1], settings, raw_dir)
+    if result.output_path is None:
+        msg = "GDELT extraction did not produce an output path."
+        raise RuntimeError(msg)
+    return result.output_path
 
 
 def fetch_rss(run_id: str | None = None, settings: Settings | None = None) -> Path:
     settings = settings or get_settings()
     raw_dir = live_raw_dir(settings, resolve_run_id(run_id))
-    return fetch_source(LIVE_SOURCES[2], settings, raw_dir)
+    result = fetch_source(LIVE_SOURCES[2], settings, raw_dir)
+    if result.output_path is None:
+        msg = "RSS extraction did not produce an output path."
+        raise RuntimeError(msg)
+    return result.output_path
 
 
 def fetch_live_sources(run_id: str | None = None) -> list[Path]:
     settings = get_settings()
     resolved_run_id = resolve_run_id(run_id)
     raw_dir = live_raw_dir(settings, resolved_run_id)
-    return fetch_sources(LIVE_SOURCES, settings, raw_dir, "live")
+    return fetch_sources(LIVE_SOURCES, settings, raw_dir, "live", minimum_successes=1)
 
 
 def fetch_fakeddit(settings: Settings | None = None) -> Path:
     settings = settings or get_settings()
-    return fetch_source(STATIC_SOURCES[0], settings, static_raw_dir(settings))
+    result = fetch_source(STATIC_SOURCES[0], settings, static_raw_dir(settings))
+    if result.output_path is None:
+        msg = "Fakeddit extraction did not produce an output path."
+        raise RuntimeError(msg)
+    return result.output_path
 
 
 def fetch_climate_fever(settings: Settings | None = None) -> Path:
     settings = settings or get_settings()
-    return fetch_source(STATIC_SOURCES[1], settings, static_raw_dir(settings))
+    result = fetch_source(STATIC_SOURCES[1], settings, static_raw_dir(settings))
+    if result.output_path is None:
+        msg = "Climate-FEVER extraction did not produce an output path."
+        raise RuntimeError(msg)
+    return result.output_path
 
 
 def fetch_dataforgood(settings: Settings | None = None) -> Path:
     settings = settings or get_settings()
-    return fetch_source(STATIC_SOURCES[2], settings, static_raw_dir(settings))
+    result = fetch_source(STATIC_SOURCES[2], settings, static_raw_dir(settings))
+    if result.output_path is None:
+        msg = "DataForGood extraction did not produce an output path."
+        raise RuntimeError(msg)
+    return result.output_path
 
 
 def fetch_static_sources() -> list[Path]:

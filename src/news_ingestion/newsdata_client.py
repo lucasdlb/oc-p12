@@ -70,6 +70,16 @@ class NewsDataClient:
                 response.raise_for_status()
                 payload = response.json()
             except requests.RequestException as exc:
+                response = getattr(exc, "response", None)
+                logger.warning(
+                    "NewsData.io HTTP request failed",
+                    extra={
+                        "source": "newsdata",
+                        "status_code": getattr(response, "status_code", None),
+                        "error_type": type(exc).__name__,
+                        "error_message": str(exc),
+                    },
+                )
                 msg = "NewsData.io HTTP request failed."
                 raise RuntimeError(msg) from exc
             except ValueError as exc:
@@ -79,6 +89,10 @@ class NewsDataClient:
             if payload.get("status") == "error":
                 message = payload.get("results", {}).get("message") or payload.get(
                     "message"
+                )
+                logger.error(
+                    "NewsData.io API returned an error",
+                    extra={"source": "newsdata", "error_message": message},
                 )
                 raise RuntimeError(f"NewsData.io API error: {message}")
 
@@ -106,7 +120,8 @@ class NewsDataClient:
                 valid_articles.append(article)
             else:
                 logger.warning(
-                    "Skipping article with inaccessible image: %s", article.link
+                    "Skipping article with inaccessible image",
+                    extra={"source": "newsdata", "source_url": article.link},
                 )
         return valid_articles
 
