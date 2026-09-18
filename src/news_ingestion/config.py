@@ -105,6 +105,7 @@ class NewsDataSettings(BaseModel):
 
 
 class GdeltSettings(BaseModel):
+    enabled: bool = True
     base_url: str = "https://api.gdeltproject.org/api/v2/doc/doc"
     query: str = "climate change"
     mode: str = "artlist"
@@ -114,6 +115,10 @@ class GdeltSettings(BaseModel):
     language: str | None = "English"
     only_with_images: bool = True
     validate_image_urls: bool = False
+    max_retries: int = Field(default=5, ge=0)
+    retry_backoff_seconds: list[int] = Field(
+        default_factory=lambda: [5, 10, 15, 20, 25]
+    )
 
     @field_validator("base_url")
     @classmethod
@@ -140,6 +145,14 @@ class GdeltSettings(BaseModel):
             return None
         language = value.strip()
         return language or None
+
+    @field_validator("retry_backoff_seconds")
+    @classmethod
+    def validate_retry_backoff_seconds(cls, value: list[int]) -> list[int]:
+        if any(delay < 0 for delay in value):
+            msg = "gdelt.retry_backoff_seconds must contain positive or zero delays."
+            raise ValueError(msg)
+        return value
 
 
 class ClimateFeverSettings(BaseModel):

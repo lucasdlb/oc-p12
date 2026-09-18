@@ -29,11 +29,14 @@ only_with_images = false
 validate_image_urls = true
 
 [gdelt]
+enabled = false
 query = "gdelt query"
 language = "French"
 max_records = 10
 only_with_images = false
 validate_image_urls = true
+max_retries = 3
+retry_backoff_seconds = [5, 10, 15]
 
 [climate_fever]
 dataset_name = "custom/climate_fever"
@@ -86,10 +89,13 @@ validate_image_urls = true
     assert settings.newsdata.only_with_images is False
     assert settings.newsdata.validate_image_urls is True
     assert settings.gdelt.query == "gdelt query"
+    assert settings.gdelt.enabled is False
     assert settings.gdelt.language == "French"
     assert settings.gdelt.max_records == 10
     assert settings.gdelt.only_with_images is False
     assert settings.gdelt.validate_image_urls is True
+    assert settings.gdelt.max_retries == 3
+    assert settings.gdelt.retry_backoff_seconds == [5, 10, 15]
     assert settings.climate_fever.dataset_name == "custom/climate_fever"
     assert settings.climate_fever.split == "train"
     assert settings.climate_fever.max_records == 25

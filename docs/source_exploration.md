@@ -145,7 +145,15 @@ REST-style `GET` request to `https://api.gdeltproject.org/api/v2/doc/doc`. Typic
 
 GDELT is a public data platform with broad coverage and no API key requirement. It is generally reliable for article discovery, but it may return incomplete records, missing images, duplicated URLs, or articles only loosely related to the query. Filtering and validation are required downstream.
 
-Usage must respect the public API service limits and should avoid excessive calls.
+Usage must respect the public API service limits and should avoid excessive calls. The public endpoint can return `429 Too Many Requests` under dynamic throttling even when a fixed numeric quota is not documented. The extractor treats GDELT as a best-effort live source, retries transient HTTP failures with polite backoff, and does not block the whole live ETL when other sources succeed.
+
+The current configuration supports:
+
+- `gdelt.enabled`: set to `false` to skip GDELT in the live multi-source Airflow extraction.
+- `gdelt.max_retries`: number of retry attempts after the initial request.
+- `gdelt.retry_backoff_seconds`: retry delays, defaulting to `5, 10, 15, 20, 25` seconds.
+
+When GDELT returns a `Retry-After` header, that value is used instead of the configured delay for that retry attempt.
 
 ### Expected Output Format
 

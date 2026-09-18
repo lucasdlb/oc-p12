@@ -236,6 +236,9 @@ def fetch_newsdata(run_id: str | None = None, settings: Settings | None = None) 
 
 def fetch_gdelt(run_id: str | None = None, settings: Settings | None = None) -> Path:
     settings = settings or get_settings()
+    if not settings.gdelt.enabled:
+        msg = "GDELT extraction is disabled by configuration."
+        raise RuntimeError(msg)
     raw_dir = live_raw_dir(settings, resolve_run_id(run_id))
     result = fetch_source(LIVE_SOURCES[1], settings, raw_dir)
     if result.output_path is None:
@@ -258,7 +261,12 @@ def fetch_live_sources(run_id: str | None = None) -> list[Path]:
     settings = get_settings()
     resolved_run_id = resolve_run_id(run_id)
     raw_dir = live_raw_dir(settings, resolved_run_id)
-    return fetch_sources(LIVE_SOURCES, settings, raw_dir, "live", minimum_successes=1)
+    live_sources = tuple(
+        source
+        for source in LIVE_SOURCES
+        if source.name != "gdelt" or settings.gdelt.enabled
+    )
+    return fetch_sources(live_sources, settings, raw_dir, "live", minimum_successes=1)
 
 
 def fetch_fakeddit(settings: Settings | None = None) -> Path:
