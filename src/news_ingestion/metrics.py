@@ -43,7 +43,7 @@ def save_stage_metrics(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
+        f"{json.dumps(payload, ensure_ascii=False, indent=2)}\n",
         encoding="utf-8",
     )
     return output_path

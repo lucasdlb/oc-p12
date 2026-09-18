@@ -12,7 +12,7 @@ This project builds an automated data acquisition pipeline for multimodal fake-n
 | Conceptual data schema | Complete | `docs/data_schema.md` |
 | Airflow ETL DAG | Complete | `dags/multimodal_etl.py` |
 | Database loading | Complete | `src/news_ingestion/database.py`, `dags/sql/`, `docs/db.md` |
-| KPI dashboard | Complete | `dashboard/app.py` |
+| KPI dashboard | Complete | `dashboard/app.py`, `dashboard/streamlit_app.py` |
 | Monitoring plan | Complete | `docs/monitoring_plan.md` |
 
 ## Project Structure
@@ -104,7 +104,7 @@ Database inspection commands are documented in `docs/db.md`.
 
 ## KPI Dashboard
 
-Generate the dashboard from the default processed dataset:
+Generate the static HTML dashboard from the default processed dataset:
 
 ```bash
 uv run python dashboard/app.py
@@ -122,6 +122,22 @@ uv run python dashboard/app.py \
   --metrics data/metrics/runs/<run_id>/metrics.json \
   --output dashboard/<run_id>.html
 ```
+
+Run the interactive Streamlit dashboard locally:
+
+```bash
+uv run streamlit run dashboard/streamlit_app.py
+```
+
+The app opens at `http://localhost:8501`. It reads structured metrics, processed JSON, and can query PostgreSQL when `NEWS_DASHBOARD_DATABASE_URL` is configured.
+
+Run the Streamlit dashboard with Docker Compose:
+
+```bash
+docker compose up -d dashboard
+```
+
+The Compose service uses `postgresql://news:news@news-postgres:5432/news` inside the Docker network and exposes the UI on `http://localhost:8501`.
 
 ## Monitoring
 

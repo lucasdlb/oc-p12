@@ -36,7 +36,8 @@ The monitored workflow includes:
 | Structured metrics | `data/metrics/metrics.json` and `data/metrics/runs/<run_id>/metrics.json`. | Reuse extraction, transformation, and load metrics in dashboards without parsing log text. |
 | Processed JSON | `data/processed/processed_records.json` and run-specific files. | Validate processed output before dashboard or database loading. |
 | PostgreSQL | `news_records` table. | Confirm records were loaded and merged correctly. |
-| KPI dashboard | `dashboard/dashboard.html`. | Present quality and coverage metrics for non-technical review. |
+| Static KPI dashboard | `dashboard/dashboard.html`. | Present quality and coverage metrics for non-technical review. |
+| Streamlit KPI dashboard | `dashboard/streamlit_app.py` at `http://localhost:8501`. | Interactive review of run metrics, processed data quality, and database load checks. |
 
 ## Verification Frequency
 
@@ -85,7 +86,7 @@ If database loading fails:
 
 ## Dashboard Procedure
 
-Generate the dashboard after transformation:
+Generate the static dashboard after transformation:
 
 ```bash
 uv run python dashboard/app.py
@@ -99,6 +100,20 @@ uv run python dashboard/app.py \
   --metrics data/metrics/runs/<run_id>/metrics.json \
   --output dashboard/<run_id>.html
 ```
+
+Run the interactive Streamlit dashboard locally:
+
+```bash
+uv run streamlit run dashboard/streamlit_app.py
+```
+
+Run the Streamlit dashboard with Docker Compose:
+
+```bash
+docker compose up -d dashboard
+```
+
+The Streamlit app should be used for operational review because it combines structured metrics, processed JSON quality checks, and optional PostgreSQL load checks.
 
 ## Review Checklist
 

@@ -1,27 +1,33 @@
 {
   "transformation": {
-    "total_records": 2,
-    "article_records": 1,
-    "claim_records": 1,
-    "valid_records": 2,
-    "valid_record_rate": 100.0,
-    "multimodal_records": 1,
-    "multimodal_rate": 50.0,
-    "valid_article_image_records": 1,
-    "valid_article_image_rate": 100.0,
-    "invalid_or_missing_article_images": 0,
+    "total_records": 1680,
+    "article_records": 680,
+    "claim_records": 1000,
+    "valid_records": 1665,
+    "valid_record_rate": 99.1,
+    "multimodal_records": 680,
+    "multimodal_rate": 40.5,
+    "valid_article_image_records": 665,
+    "valid_article_image_rate": 97.8,
+    "invalid_or_missing_article_images": 15,
     "records_by_source": {
-      "dataforgood": 1,
-      "rss": 1
+      "climate_fever": 500,
+      "dataforgood_climate_misinformation_rcot": 500,
+      "fakeddit": 500,
+      "gdelt": 71,
+      "newsdata.io": 10,
+      "rss": 99
     },
     "records_by_type": {
-      "claim": 1,
-      "article": 1
+      "claim": 1000,
+      "article": 680
     },
-    "validation_errors": {},
-    "input_dir": "/tmp/pytest-of-lucas/pytest-13/test_transform_raw_directory_r0/raw",
-    "output_path": "/tmp/pytest-of-lucas/pytest-13/test_transform_raw_directory_r0/processed/processed_records.json",
-    "duration_ms": 1
+    "validation_errors": {
+      "invalid_image_url_format": 15
+    },
+    "input_dir": "data/raw",
+    "output_path": "data/processed/processed_records.json",
+    "duration_ms": 317
   },
-  "updated_at": "2026-09-18T09:13:46.542520+00:00"
+  "updated_at": "2026-09-18T09:39:30.491142+00:00"
 }

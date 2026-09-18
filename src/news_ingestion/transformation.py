@@ -200,14 +200,16 @@ def transform_raw_directory(
         "output_path": str(output_path),
         "duration_ms": round((time.monotonic() - started_at) * 1000),
     }
-    metrics_path = save_stage_metrics("transformation", metrics, run_id)
+    metrics_path = None
+    if should_save_metrics(output_path, run_id):
+        metrics_path = save_stage_metrics("transformation", metrics, run_id)
     logger.info(
         "Saved processed records",
         extra={
             "output_path": str(output_path),
             "record_count": len(processed_records),
             "duration_ms": metrics["duration_ms"],
-            "metrics_path": str(metrics_path),
+            "metrics_path": str(metrics_path) if metrics_path else None,
             **metrics,
         },
     )
@@ -221,6 +223,16 @@ def infer_record_type(input_path: Path) -> RecordType | None:
     if file_name.endswith("_claims.json"):
         return "claim"
     return None
+
+
+def should_save_metrics(output_path: Path, run_id: str | None) -> bool:
+    if run_id:
+        return True
+    try:
+        output_path.resolve().relative_to(PROJECT_ROOT)
+    except ValueError:
+        return False
+    return True
 
 
 def load_json_records(input_path: Path) -> list[dict[str, Any]]:

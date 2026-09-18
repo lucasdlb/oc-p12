@@ -333,6 +333,23 @@ services:
     depends_on:
       <<: *airflow-common-depends-on
 
+  dashboard:
+    <<: *airflow-common
+    command: streamlit run /opt/airflow/dashboard/streamlit_app.py --server.address=0.0.0.0 --server.port=8501 --server.headless=true
+    ports:
+      - "8501:8501"
+    environment:
+      <<: *airflow-common-env
+      PROJECT_ROOT: /opt/airflow
+      NEWS_DASHBOARD_DATABASE_URL: postgresql://news:news@news-postgres:5432/news
+    volumes:
+      - ${AIRFLOW_PROJ_DIR:-.}/dashboard:/opt/airflow/dashboard
+      - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
+      - ${AIRFLOW_PROJ_DIR:-.}/config.toml:/opt/airflow/config.toml:ro
+    depends_on:
+      news-postgres:
+        condition: service_healthy
+
   # You can enable flower by adding "--profile flower" option e.g. docker-compose --profile flower up
   # or by explicitly targeted on the command line e.g. docker-compose up flower.
   # See: https://docs.docker.com/compose/profiles/
