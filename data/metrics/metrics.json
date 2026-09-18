@@ -1,0 +1,27 @@
+{
+  "transformation": {
+    "total_records": 2,
+    "article_records": 1,
+    "claim_records": 1,
+    "valid_records": 2,
+    "valid_record_rate": 100.0,
+    "multimodal_records": 1,
+    "multimodal_rate": 50.0,
+    "valid_article_image_records": 1,
+    "valid_article_image_rate": 100.0,
+    "invalid_or_missing_article_images": 0,
+    "records_by_source": {
+      "dataforgood": 1,
+      "rss": 1
+    },
+    "records_by_type": {
+      "claim": 1,
+      "article": 1
+    },
+    "validation_errors": {},
+    "input_dir": "/tmp/pytest-of-lucas/pytest-13/test_transform_raw_directory_r0/raw",
+    "output_path": "/tmp/pytest-of-lucas/pytest-13/test_transform_raw_directory_r0/processed/processed_records.json",
+    "duration_ms": 1
+  },
+  "updated_at": "2026-09-18T09:13:46.542520+00:00"
+}

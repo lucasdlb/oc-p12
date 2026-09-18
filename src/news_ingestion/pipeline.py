@@ -144,6 +144,7 @@ def fetch_sources(
     raw_dir: Path,
     source_group: str,
     minimum_successes: int | None = None,
+    run_id: str | None = None,
 ) -> list[Path]:
     minimum_successes = len(sources) if minimum_successes is None else minimum_successes
     results: list[SourceFetchResult] = []
@@ -266,7 +267,14 @@ def fetch_live_sources(run_id: str | None = None) -> list[Path]:
         for source in LIVE_SOURCES
         if source.name != "gdelt" or settings.gdelt.enabled
     )
-    return fetch_sources(live_sources, settings, raw_dir, "live", minimum_successes=1)
+    return fetch_sources(
+        live_sources,
+        settings,
+        raw_dir,
+        "live",
+        minimum_successes=1,
+        run_id=resolved_run_id,
+    )
 
 
 def fetch_fakeddit(settings: Settings | None = None) -> Path:

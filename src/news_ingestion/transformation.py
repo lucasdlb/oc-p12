@@ -10,6 +10,7 @@ from typing import Any, Literal
 
 from news_ingestion.config import PROJECT_ROOT
 from news_ingestion.image_validation import has_valid_image_url_format
+from news_ingestion.metrics import processed_record_metrics, save_stage_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +166,7 @@ def transform_records(
 def transform_raw_directory(
     raw_data_dir: Path = PROJECT_ROOT / "data" / "raw" / "live",
     output_path: Path = PROJECT_ROOT / "data" / "processed" / "processed_records.json",
+    run_id: str | None = None,
 ) -> list[ProcessedRecord]:
     started_at = time.monotonic()
     processed_records: list[ProcessedRecord] = []
@@ -191,12 +193,22 @@ def transform_raw_directory(
         )
 
     save_processed_records(processed_records, output_path)
+    transformed_records = [record.to_dict() for record in processed_records]
+    metrics = {
+        **processed_record_metrics(transformed_records),
+        "input_dir": str(raw_data_dir),
+        "output_path": str(output_path),
+        "duration_ms": round((time.monotonic() - started_at) * 1000),
+    }
+    metrics_path = save_stage_metrics("transformation", metrics, run_id)
     logger.info(
         "Saved processed records",
         extra={
             "output_path": str(output_path),
             "record_count": len(processed_records),
-            "duration_ms": round((time.monotonic() - started_at) * 1000),
+            "duration_ms": metrics["duration_ms"],
+            "metrics_path": str(metrics_path),
+            **metrics,
         },
     )
     return processed_records

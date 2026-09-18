@@ -6,6 +6,12 @@ import time
 from pathlib import Path
 from typing import Any
 
+from news_ingestion.metrics import (
+    infer_run_id_from_processed_path,
+    processed_record_metrics,
+    save_stage_metrics,
+)
+
 logger = logging.getLogger(__name__)
 
 RECORD_COLUMNS = (
@@ -41,9 +47,24 @@ def load_processed_records_to_temp(processed_path: Path, conn: Any) -> int:
 
     rows = [_record_to_row(record) for record in records]
     if not rows:
+        run_id = infer_run_id_from_processed_path(processed_path)
+        metrics_path = save_stage_metrics(
+            "load",
+            {
+                "processed_path": str(processed_path),
+                "table": "news_records_temp",
+                "loaded_records": 0,
+                "duration_ms": round((time.monotonic() - started_at) * 1000),
+            },
+            run_id,
+        )
         logger.info(
             "No processed records to load",
-            extra={"processed_path": str(processed_path), "record_count": 0},
+            extra={
+                "processed_path": str(processed_path),
+                "record_count": 0,
+                "metrics_path": str(metrics_path),
+            },
         )
         return 0
 
@@ -57,13 +78,22 @@ def load_processed_records_to_temp(processed_path: Path, conn: Any) -> int:
     with conn.cursor() as cursor:
         cursor.executemany(query, rows)
     conn.commit()
+    run_id = infer_run_id_from_processed_path(processed_path)
+    duration_ms = round((time.monotonic() - started_at) * 1000)
+    load_metrics = {
+        "processed_path": str(processed_path),
+        "table": "news_records_temp",
+        "loaded_records": len(rows),
+        "duration_ms": duration_ms,
+        "loaded_data_quality": processed_record_metrics(records),
+    }
+    metrics_path = save_stage_metrics("load", load_metrics, run_id)
     logger.info(
         "Loaded processed records to temp table",
         extra={
-            "processed_path": str(processed_path),
-            "table": "news_records_temp",
+            **load_metrics,
             "record_count": len(rows),
-            "duration_ms": round((time.monotonic() - started_at) * 1000),
+            "metrics_path": str(metrics_path),
         },
     )
     return len(rows)
