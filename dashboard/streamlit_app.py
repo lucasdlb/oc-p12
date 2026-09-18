@@ -198,15 +198,15 @@ def render_samples_tab(records: list[dict[str, Any]]) -> None:
 
 def query_database_metrics(database_url: str) -> dict[str, Any]:
     try:
-        import psycopg2
+        import psycopg
     except ImportError as exc:
-        msg = "Install psycopg2 or run inside the Airflow Docker image to query PostgreSQL."
+        msg = "Install psycopg[binary] or rebuild the dashboard image to query PostgreSQL."
         raise DatabaseMetricsError(msg) from exc
 
     try:
-        with psycopg2.connect(database_url) as conn, conn.cursor() as cursor:
+        with psycopg.connect(database_url) as conn, conn.cursor() as cursor:
             cursor.execute("SELECT COUNT(*) FROM news_records")
-            total_records = cursor.fetchone()[0]
+            total_records = fetch_count(cursor)
             cursor.execute(
                 """
                 SELECT COUNT(*)
@@ -214,7 +214,7 @@ def query_database_metrics(database_url: str) -> dict[str, Any]:
                 WHERE is_multimodal = true
                 """
             )
-            multimodal_records = cursor.fetchone()[0]
+            multimodal_records = fetch_count(cursor)
             cursor.execute(
                 """
                 SELECT extracted_from, COUNT(*)
@@ -224,7 +224,7 @@ def query_database_metrics(database_url: str) -> dict[str, Any]:
                 """
             )
             records_by_source = dict(cursor.fetchall())
-    except psycopg2.Error as exc:
+    except psycopg.Error as exc:
         raise DatabaseMetricsError(str(exc)) from exc
 
     return {
@@ -233,6 +233,13 @@ def query_database_metrics(database_url: str) -> dict[str, Any]:
         "loaded_multimodal_rate": percentage(multimodal_records, total_records),
         "records_by_source": records_by_source,
     }
+
+
+def fetch_count(cursor: Any) -> int:
+    row = cursor.fetchone()
+    if row is None:
+        raise DatabaseMetricsError("Database count query returned no rows.")
+    return int(row[0])
 
 
 def render_count_chart(counts: Counter[str]) -> None:
