@@ -28,7 +28,7 @@ class JsonFormatter(logging.Formatter):
                 payload[key] = value
 
         if record.exc_info:
-            payload["error_detail"] = "".join(
+            payload["exception_text"] = "".join(
                 traceback.format_exception(*record.exc_info)
             )
 
@@ -39,16 +39,16 @@ def configure_logging(log_level: str | None = None) -> None:
     level_name = (log_level or os.getenv("LOG_LEVEL") or "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)
 
-    formatter = JsonFormatter()
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
 
     if root_logger.handlers:
+        # Airflow installs structured handlers that its UI expects; keep their formatter.
         for handler in root_logger.handlers:
             handler.setLevel(level)
-            handler.setFormatter(formatter)
         return
 
+    formatter = JsonFormatter()
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(level)
     handler.setFormatter(formatter)
