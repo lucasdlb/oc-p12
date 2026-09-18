@@ -1,0 +1,26 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    STREAMLIT_SERVER_HEADLESS=true
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv /root/.local/bin/uv /usr/local/bin/uv
+
+COPY pyproject.toml uv.lock README.md ./
+RUN uv export --format requirements-txt --no-dev --no-emit-project --locked > requirements.txt && \
+    uv pip install --system --no-cache -r requirements.txt
+
+COPY src ./src
+RUN uv pip install --system --no-cache --no-deps .
+
+COPY dashboard ./dashboard
+
+EXPOSE 8501
+
+CMD ["streamlit", "run", "dashboard/streamlit_app.py", "--server.address=0.0.0.0", "--server.port=8501", "--server.headless=true"]

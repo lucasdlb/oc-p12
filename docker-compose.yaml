@@ -334,18 +334,17 @@ services:
       <<: *airflow-common-depends-on
 
   dashboard:
-    <<: *airflow-common
-    command: streamlit run /opt/airflow/dashboard/streamlit_app.py --server.address=0.0.0.0 --server.port=8501 --server.headless=true
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
     ports:
       - "8501:8501"
     environment:
-      <<: *airflow-common-env
-      PROJECT_ROOT: /opt/airflow
+      PROJECT_ROOT: /app
       NEWS_DASHBOARD_DATABASE_URL: postgresql://news:news@news-postgres:5432/news
     volumes:
-      - ${AIRFLOW_PROJ_DIR:-.}/dashboard:/opt/airflow/dashboard
-      - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
-      - ${AIRFLOW_PROJ_DIR:-.}/config.toml:/opt/airflow/config.toml:ro
+      - ${AIRFLOW_PROJ_DIR:-.}/data:/app/data
+      - ${AIRFLOW_PROJ_DIR:-.}/config.toml:/app/config.toml:ro
     depends_on:
       news-postgres:
         condition: service_healthy

@@ -131,13 +131,14 @@ uv run streamlit run dashboard/streamlit_app.py
 
 The app opens at `http://localhost:8501`. It reads structured metrics, processed JSON, and can query PostgreSQL when `NEWS_DASHBOARD_DATABASE_URL` is configured.
 
-Run the Streamlit dashboard with Docker Compose:
+Run the independent Streamlit dashboard service with Docker Compose:
 
 ```bash
 docker compose up -d dashboard
 ```
 
 The Compose service uses `postgresql://news:news@news-postgres:5432/news` inside the Docker network and exposes the UI on `http://localhost:8501`.
+It builds from `Dockerfile.dashboard` and does not reuse the Airflow entrypoint.
 
 ## Monitoring
 

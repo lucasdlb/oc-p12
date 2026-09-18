@@ -113,7 +113,7 @@ Run the Streamlit dashboard with Docker Compose:
 docker compose up -d dashboard
 ```
 
-The Streamlit app should be used for operational review because it combines structured metrics, processed JSON quality checks, and optional PostgreSQL load checks.
+The Compose dashboard is an independent service built from `Dockerfile.dashboard`. It should be used for operational review because it combines structured metrics, processed JSON quality checks, and optional PostgreSQL load checks without running through the Airflow entrypoint.
 
 ## Review Checklist
 
