@@ -1,6 +1,6 @@
 import json
 
-from news_ingestion.dataforgood_client import DataForGoodClient
+from news_ingestion.clients.dataforgood import DataForGoodClient
 
 
 def test_fetch_claims_maps_dataforgood_records(monkeypatch):
@@ -26,10 +26,12 @@ def test_fetch_claims_maps_dataforgood_records(monkeypatch):
         },
     ]
 
-    def fake_load_records(self):
+    def fake_iter_dataset_records(self):
         return iter(records)
 
-    monkeypatch.setattr(DataForGoodClient, "_load_records", fake_load_records)
+    monkeypatch.setattr(
+        DataForGoodClient, "_iter_dataset_records", fake_iter_dataset_records
+    )
 
     client = DataForGoodClient(
         dataset_name="DataForGood/climate-misinformation-RCoT",

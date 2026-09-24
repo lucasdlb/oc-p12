@@ -1894,18 +1894,33 @@ name = "news-ingestion"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "pydantic-settings" },
+]
+
+[package.optional-dependencies]
+airflow = [
+    { name = "apache-airflow-providers-postgres" },
     { name = "datasets" },
     { name = "feedparser" },
     { name = "psycopg", extra = ["binary"] },
-    { name = "pydantic-settings" },
     { name = "requests" },
+]
+dashboard = [
+    { name = "psycopg", extra = ["binary"] },
     { name = "streamlit" },
+]
+database = [
+    { name = "psycopg", extra = ["binary"] },
+]
+ingestion = [
+    { name = "datasets" },
+    { name = "feedparser" },
+    { name = "requests" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "apache-airflow" },
-    { name = "apache-airflow-providers-postgres" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "ruff" },
@@ -1914,18 +1929,24 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "datasets", specifier = ">=4.0.0" },
-    { name = "feedparser", specifier = ">=6.0.12" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
+    { name = "apache-airflow-providers-postgres", marker = "extra == 'airflow'", specifier = ">=7.0.2" },
+    { name = "datasets", marker = "extra == 'airflow'", specifier = ">=4.0.0" },
+    { name = "datasets", marker = "extra == 'ingestion'", specifier = ">=4.0.0" },
+    { name = "feedparser", marker = "extra == 'airflow'", specifier = ">=6.0.12" },
+    { name = "feedparser", marker = "extra == 'ingestion'", specifier = ">=6.0.12" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'airflow'", specifier = ">=3.2" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'dashboard'", specifier = ">=3.2" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'database'", specifier = ">=3.2" },
     { name = "pydantic-settings", specifier = ">=2.12.0" },
-    { name = "requests", specifier = ">=2.32.5" },
-    { name = "streamlit", specifier = ">=1.64.0" },
+    { name = "requests", marker = "extra == 'airflow'", specifier = ">=2.32.5" },
+    { name = "requests", marker = "extra == 'ingestion'", specifier = ">=2.32.5" },
+    { name = "streamlit", marker = "extra == 'dashboard'", specifier = ">=1.64.0" },
 ]
+provides-extras = ["ingestion", "database", "dashboard", "airflow"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "apache-airflow", specifier = "==3.3.1" },
-    { name = "apache-airflow-providers-postgres", specifier = ">=7.0.2" },
     { name = "pre-commit", specifier = ">=4.6.2" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "ruff", specifier = ">=0.16.4" },

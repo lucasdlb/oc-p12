@@ -1,0 +1,70 @@
+INSERT INTO news_records (
+    record_id,
+    record_type,
+    source_record_id,
+    title,
+    text,
+    image_url,
+    source_url,
+    published_at,
+    source_name,
+    extracted_from,
+    language,
+    country,
+    category,
+    label,
+    evidence_count,
+    text_length,
+    word_count,
+    is_multimodal,
+    has_valid_image_url,
+    validation_errors
+)
+SELECT DISTINCT
+    record_id,
+    record_type,
+    source_record_id,
+    title,
+    text,
+    image_url,
+    source_url,
+    published_at,
+    source_name,
+    extracted_from,
+    language,
+    country,
+    category,
+    label,
+    evidence_count,
+    text_length,
+    word_count,
+    is_multimodal,
+    has_valid_image_url,
+    validation_errors
+FROM news_records_staging
+WHERE run_id = %(run_id)s
+ON CONFLICT (record_id) DO UPDATE
+SET
+    record_type = EXCLUDED.record_type,
+    source_record_id = EXCLUDED.source_record_id,
+    title = EXCLUDED.title,
+    text = EXCLUDED.text,
+    image_url = EXCLUDED.image_url,
+    source_url = EXCLUDED.source_url,
+    published_at = EXCLUDED.published_at,
+    source_name = EXCLUDED.source_name,
+    extracted_from = EXCLUDED.extracted_from,
+    language = EXCLUDED.language,
+    country = EXCLUDED.country,
+    category = EXCLUDED.category,
+    label = EXCLUDED.label,
+    evidence_count = EXCLUDED.evidence_count,
+    text_length = EXCLUDED.text_length,
+    word_count = EXCLUDED.word_count,
+    is_multimodal = EXCLUDED.is_multimodal,
+    has_valid_image_url = EXCLUDED.has_valid_image_url,
+    validation_errors = EXCLUDED.validation_errors,
+    loaded_at = NOW();
+
+DELETE FROM news_records_staging
+WHERE run_id = %(run_id)s;

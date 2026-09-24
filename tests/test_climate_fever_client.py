@@ -1,4 +1,4 @@
-from news_ingestion.climate_fever_client import ClimateFeverClient
+from news_ingestion.clients.climate_fever import ClimateFeverClient
 
 
 def test_fetch_claims_maps_climate_fever_records(monkeypatch):
@@ -16,10 +16,12 @@ def test_fetch_claims_maps_climate_fever_records(monkeypatch):
         },
     ]
 
-    def fake_load_records(self):
+    def fake_iter_dataset_records(self):
         return iter(records)
 
-    monkeypatch.setattr(ClimateFeverClient, "_load_records", fake_load_records)
+    monkeypatch.setattr(
+        ClimateFeverClient, "_iter_dataset_records", fake_iter_dataset_records
+    )
 
     client = ClimateFeverClient(
         dataset_name="tdiggelm/climate_fever",
@@ -38,3 +40,17 @@ def test_fetch_claims_maps_climate_fever_records(monkeypatch):
     assert claims[0].language == "en"
     assert claims[0].extracted_from == "climate_fever"
     assert claims[0].raw_payload["claim_id"] == 12
+
+
+def test_fetch_claims_preserves_zero_identifiers_and_labels(monkeypatch):
+    monkeypatch.setattr(
+        ClimateFeverClient,
+        "_iter_dataset_records",
+        lambda self: iter([{"claim_id": 0, "claim": "Claim", "claim_label": 0}]),
+    )
+    client = ClimateFeverClient("tdiggelm/climate_fever", "test", max_records=1)
+
+    claim = client.fetch_claims()[0]
+
+    assert claim.claim_id == "0"
+    assert claim.label == "0"

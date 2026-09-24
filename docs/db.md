@@ -48,6 +48,13 @@ Describe the main table:
 \d news_records
 ```
 
+The pipeline uses `news_records_staging`, keyed by Airflow `run_id`, while loading and
+merging a run. Rows for other active runs are isolated and left untouched.
+Both tables are shared by every run; the pipeline does not create tables per run.
+`news_records.record_id` is the primary key, so a record seen in a later run updates
+the existing row instead of creating a duplicate. After a successful merge, only the
+staging rows belonging to the merged run are deleted.
+
 Count loaded records:
 
 ```sql

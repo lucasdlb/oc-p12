@@ -7,24 +7,24 @@ This project builds an automated data acquisition pipeline for multimodal fake-n
 | Requirement | Status | Location |
 | --- | --- | --- |
 | Source exploration report | Complete | `docs/source_exploration.md` |
-| Automated extraction scripts | Complete | `scripts/`, `src/news_ingestion/*_client.py` |
-| Transformation pipeline | Complete | `scripts/transform_raw_data.py`, `src/news_ingestion/transformation.py` |
+| Automated extraction script | Complete | `src/news_ingestion/cli.py` (`news-ingestion extract`) |
+| Transformation pipeline | Complete | `src/news_ingestion/services/transformation.py` |
 | Conceptual data schema | Complete | `docs/data_schema.md` |
 | Airflow ETL DAG | Complete | `dags/multimodal_etl.py` |
-| Database loading | Complete | `src/news_ingestion/database.py`, `dags/sql/`, `docs/db.md` |
-| KPI dashboard | Complete | `dashboard/app.py`, `dashboard/streamlit_app.py` |
+| Database loading | Complete | `src/news_ingestion/services/loading.py`, `src/news_ingestion/persistence/postgres.py`, `src/news_ingestion/sql/`, `docs/db.md` |
+| KPI dashboard / monitoring interface | Complete | `dashboard/streamlit_app.py` |
 | Monitoring plan | Complete | `docs/monitoring_plan.md` |
+| Airflow execution evidence | To provide | Airflow UI screenshots or exported run logs |
 
 ## Project Structure
 
 ```text
 .
-├── dashboard/              # KPI dashboard generator and generated HTML output
-├── dags/                   # Airflow DAG and SQL files
+├── dashboard/              # Interactive Streamlit KPI dashboard
+├── dags/                   # Airflow workflow definition
 ├── data/                   # Raw and processed JSON outputs
 ├── docs/                   # Project reports and operational documentation
-├── scripts/                # Command-line extraction and transformation scripts
-├── src/news_ingestion/     # Pipeline package
+├── src/news_ingestion/     # Clients, services, persistence, CLI, and packaged SQL
 └── tests/                  # Unit tests
 ```
 
@@ -49,46 +49,53 @@ See `docs/source_exploration.md` for qualification details, risks, usage rights,
 The project uses Python 3.12 and `uv`.
 
 ```bash
-uv sync --all-groups
+uv sync --all-groups --all-extras
 ```
 
-Create local environment files from the examples when needed:
+Create the local environment file from the example:
 
 ```bash
 cp .env.example .env
-cp .env.airflow.exemple .env.airflow
 ```
 
 Set `NEWS_DATA_API_KEY` before running NewsData.io extraction. Hugging Face sources can optionally use `HF_TOKEN` depending on dataset access requirements.
 
 ## Run Extraction
 
-Fetch all configured non-live sources:
+The official executable extraction script is the `news-ingestion` CLI entry point,
+implemented in `src/news_ingestion/cli.py`. The Airflow DAG reuses the same
+application services; it is the orchestrator, not a separate extraction implementation.
+
+Fetch all enabled live sources:
 
 ```bash
-uv run python scripts/fetch_all_sources.py
+uv run news-ingestion extract --group live
 ```
 
 Or run individual extractors:
 
 ```bash
-uv run python scripts/fetch_newsdata.py
-uv run python scripts/fetch_gdelt.py
-uv run python scripts/fetch_rss.py
-uv run python scripts/fetch_fakeddit.py
-uv run python scripts/fetch_climate_fever.py
-uv run python scripts/fetch_dataforgood.py
+uv run news-ingestion extract --source newsdata
+uv run news-ingestion extract --source gdelt
+uv run news-ingestion extract --source rss
+uv run news-ingestion extract --source fakeddit
+uv run news-ingestion extract --source climate-fever
+uv run news-ingestion extract --source dataforgood
+uv run news-ingestion extract --group static
 ```
 
 Configuration is read from `config.toml`.
 
+Live outputs are written to `data/raw/live/` for manual runs or `data/raw/live/runs/<run_id>/` for Airflow runs. Static source outputs are written to `data/raw/static/`.
+
 ## Transform Data
 
 ```bash
-uv run python scripts/transform_raw_data.py
+uv run news-ingestion transform --group live
+uv run news-ingestion transform --group static
 ```
 
-The default processed output is `data/processed/processed_records.json`. The conceptual schema and validation rules are documented in `docs/data_schema.md`.
+The default processed output is `data/processed/processed_records.json`. Airflow runs write to `data/processed/runs/<run_id>/processed_records.json`, and static transforms write to `data/processed/static/processed_records.json`. The conceptual schema and validation rules are documented in `docs/data_schema.md`.
 
 ## Airflow ETL
 
@@ -98,38 +105,22 @@ Start Airflow and PostgreSQL services:
 docker compose up -d
 ```
 
-Open Airflow at `http://localhost:8080` and run the `multimodal_news_etl` DAG. The DAG extracts live sources, transforms the run output, loads processed records into a temporary table, and merges them into `news_records`.
+Open Airflow at `http://localhost:8080` and run the `multimodal_news_etl` DAG. The DAG extracts live sources, transforms the run output, loads processed records into run-scoped staging, and merges them into `news_records`.
 
 Database inspection commands are documented in `docs/db.md`.
 
 ## KPI Dashboard
 
-Generate the static HTML dashboard from the default processed dataset:
-
-```bash
-uv run python dashboard/app.py
-```
-
-The generated report is written to `dashboard/dashboard.html`. It includes valid record percentage, multimodal coverage, valid article image percentage, invalid or missing image count, records per source, validation errors, and sample records.
-
-Pipeline stages also write structured metrics to `data/metrics/metrics.json` for manual runs or `data/metrics/runs/<run_id>/metrics.json` for Airflow runs. The dashboard automatically reads the latest metrics file when available, so the same extraction, transformation, and load metrics that appear in logs are reused in the dashboard.
-
-To generate a dashboard for a specific Airflow run:
-
-```bash
-uv run python dashboard/app.py \
-  --input data/processed/runs/<run_id>/processed_records.json \
-  --metrics data/metrics/runs/<run_id>/metrics.json \
-  --output dashboard/<run_id>.html
-```
-
-Run the interactive Streamlit dashboard locally:
+Run the Streamlit dashboard locally:
 
 ```bash
 uv run streamlit run dashboard/streamlit_app.py
 ```
 
-The app opens at `http://localhost:8501`. It reads structured metrics, processed JSON, and can query PostgreSQL when `NEWS_DASHBOARD_DATABASE_URL` is configured.
+The app opens at `http://localhost:8501`. Dataset metrics and samples come from
+PostgreSQL when `NEWS_DASHBOARD_DATABASE_URL` is configured. The Pipeline Runs tab
+provides a run selector plus aggregate and per-run views from structured metrics in
+`data/metrics/runs`.
 
 Run the independent Streamlit dashboard service with Docker Compose:
 

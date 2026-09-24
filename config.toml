@@ -1,12 +1,20 @@
+raw_data_dir = "data/raw"
+processed_data_dir = "data/processed"
+metrics_data_dir = "data/metrics"
+dashboard_database_url = "postgresql://news:news@localhost:5433/news"
+
 [newsdata]
+enabled = true
 base_url = "https://newsdata.io/api/1/news"
 query = "climate change"
 language = "en"
 category = "environment"
 country = ""
-max_pages = 1
+max_pages = 10
 only_with_images = true
 validate_image_urls = false
+max_retries = 2
+retry_backoff_seconds = [10, 30]
 
 [gdelt]
 enabled = true
@@ -14,25 +22,28 @@ base_url = "https://api.gdeltproject.org/api/v2/doc/doc"
 query = "climate change"
 mode = "artlist"
 response_format = "json"
-max_records = 10
+max_records = 200
 sort = "datedesc"
 language = "English"
 only_with_images = true
 validate_image_urls = false
-max_retries = 5
-retry_backoff_seconds = [5, 10, 15, 20, 25]
+max_retries = 2
+retry_backoff_seconds = [10, 30]
 
 [climate_fever]
+enabled = true
 dataset_name = "tdiggelm/climate_fever"
 split = "test"
 max_records = 10
 
 [dataforgood]
+enabled = true
 dataset_name = "DataForGood/climate-misinformation-RCoT"
 splits = ["train", "test"]
 max_records = 10
 
 [fakeddit]
+enabled = true
 dataset_dir = "external/Fakeddit"
 files = ["multimodal_train.tsv", "multimodal_validate.tsv", "multimodal_test.tsv"]
 max_records = 10
@@ -40,12 +51,13 @@ only_multimodal = true
 validate_image_urls = false
 
 [rss]
+enabled = true
 feeds = [
   "https://www.theguardian.com/environment/climate-crisis/rss",
   "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
   "https://www.france24.com/en/tag/climate-change/rss",
   "https://www.politifact.com/rss/factchecks/",
 ]
-max_records_per_feed = 10
+max_records_per_feed = 100
 only_with_images = false
 validate_image_urls = false

@@ -33,11 +33,10 @@ The monitored workflow includes:
 | --- | --- | --- |
 | Airflow UI | DAG runs and task logs for `multimodal_news_etl`. | Confirm orchestration status, task duration, and task-level failures. |
 | Structured logs | `logs/` and Airflow task logs. | Diagnose source failures, retries, output paths, and record counts. |
-| Structured metrics | `data/metrics/metrics.json` and `data/metrics/runs/<run_id>/metrics.json`. | Reuse extraction, transformation, and load metrics in dashboards without parsing log text. |
+| Structured metrics | `data/metrics/metrics.json` and `data/metrics/runs/<run_id>/metrics.json`. | Reuse extraction, transformation, and load metrics in dashboards without parsing log text. Run files include `created_at`, `updated_at`, and `records_by_run` for direct run-level reporting. |
 | Processed JSON | `data/processed/processed_records.json` and run-specific files. | Validate processed output before dashboard or database loading. |
 | PostgreSQL | `news_records` table. | Confirm records were loaded and merged correctly. |
-| Static KPI dashboard | `dashboard/dashboard.html`. | Present quality and coverage metrics for non-technical review. |
-| Streamlit KPI dashboard | `dashboard/streamlit_app.py` at `http://localhost:8501`. | Interactive review of run metrics, processed data quality, and database load checks. |
+| Streamlit KPI dashboard | `dashboard/streamlit_app.py` at `http://localhost:8501`. | Review aggregate database quality, samples, and per-run pipeline metrics. |
 
 ## Verification Frequency
 
@@ -46,7 +45,7 @@ The monitored workflow includes:
 | Every DAG run | Airflow task status, non-empty extraction output, transformation success, database load count. |
 | Daily during active development | KPI dashboard, validation error counts, source counts, image URL quality. |
 | Weekly | Source reliability review, API quota usage, source schema changes, sample record audit. |
-| Before final delivery | Full test suite, linting, type check, sample exported data, Airflow proof of execution, dashboard export. |
+| Before final delivery | Full test suite, linting, type check, sample data, Airflow proof of execution, and dashboard verification. |
 
 ## Error Handling
 
@@ -74,7 +73,7 @@ If database loading fails:
 
 - Confirm the `news-postgres` service is healthy.
 - Check the Airflow connection `news_postgres`.
-- Inspect table schema and merge SQL in `dags/sql/`.
+- Inspect table schema and merge SQL in `src/news_ingestion/sql/migrations/`.
 
 ## Alert Priorities
 
@@ -86,22 +85,7 @@ If database loading fails:
 
 ## Dashboard Procedure
 
-Generate the static dashboard after transformation:
-
-```bash
-uv run python dashboard/app.py
-```
-
-The command reads `data/processed/processed_records.json`, automatically uses the latest structured metrics file when present, and writes `dashboard/dashboard.html`. For a run-specific dashboard, pass explicit paths:
-
-```bash
-uv run python dashboard/app.py \
-  --input data/processed/runs/<run_id>/processed_records.json \
-  --metrics data/metrics/runs/<run_id>/metrics.json \
-  --output dashboard/<run_id>.html
-```
-
-Run the interactive Streamlit dashboard locally:
+Run the Streamlit dashboard locally:
 
 ```bash
 uv run streamlit run dashboard/streamlit_app.py
@@ -113,7 +97,21 @@ Run the Streamlit dashboard with Docker Compose:
 docker compose up -d dashboard
 ```
 
-The Compose dashboard is an independent service built from `Dockerfile.dashboard`. It should be used for operational review because it combines structured metrics, processed JSON quality checks, and optional PostgreSQL load checks without running through the Airflow entrypoint.
+The Compose dashboard is an independent service built from `Dockerfile.dashboard`. It
+uses PostgreSQL for aggregate dataset metrics and samples, and run-scoped metrics files
+for selectable and aggregated pipeline execution views.
+
+The Streamlit dashboard is the operational monitoring interface for this project. It
+displays the metrics below and surfaces the documented thresholds as warnings:
+
+- Valid-record rate below 80%.
+- Article image validity below 50%.
+- No records in the database.
+- Source failures in a pipeline run.
+
+The dashboard is not an alert delivery system. During this project, the monitoring plan
+and the dashboard warnings are sufficient for human review; production notification
+channels can be added later without changing the metric definitions.
 
 ## Review Checklist
 

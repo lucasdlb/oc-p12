@@ -1,3 +1,5 @@
+"""Structured logging configuration for command-line and Airflow runs."""
+
 from __future__ import annotations
 
 import json
@@ -12,7 +14,10 @@ RESERVED_LOG_RECORD_KEYS = set(logging.makeLogRecord({}).__dict__)
 
 
 class JsonFormatter(logging.Formatter):
+    """Format log records as JSON objects."""
+
     def format(self, record: logging.LogRecord) -> str:
+        """Return a JSON string for one log record."""
         payload: dict[str, Any] = {
             "timestamp": datetime.fromtimestamp(record.created, UTC).isoformat(),
             "level": record.levelname.lower(),
@@ -36,6 +41,7 @@ class JsonFormatter(logging.Formatter):
 
 
 def configure_logging(log_level: str | None = None) -> None:
+    """Configure root logging with JSON output unless handlers already exist."""
     level_name = (log_level or os.getenv("LOG_LEVEL") or "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)
 

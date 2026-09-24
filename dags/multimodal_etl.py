@@ -1,6 +1,9 @@
+"""Airflow DAG for the multimodal news ETL pipeline."""
+
 from __future__ import annotations
 
 import datetime as dt
+from importlib.resources import files
 from pathlib import Path
 
 import pendulum
@@ -11,66 +14,97 @@ from airflow.sdk import dag, get_current_context, task
 POSTGRES_CONN_ID = "news_postgres"
 
 
+def migration_sql(file_name: str) -> str:
+    """Load a packaged SQL migration for an Airflow SQL task."""
+    return (
+        files("news_ingestion.sql.migrations")
+        .joinpath(file_name)
+        .read_text(encoding="utf-8")
+    )
+
+
 @dag(
     dag_id="multimodal_news_etl",
-    schedule="0 0 * * *",
+    schedule="0 */3 * * *",
     start_date=pendulum.datetime(2026, 1, 1, tz="UTC"),
     catchup=False,
+    max_active_runs=1,
     dagrun_timeout=dt.timedelta(minutes=60),
     tags=["news", "multimodal", "etl"],
 )
 def multimodal_news_etl():
+    """Define the multimodal news extraction, transform, and load DAG."""
     create_news_records = SQLExecuteQueryOperator(
         task_id="create_news_records",
         conn_id=POSTGRES_CONN_ID,
-        sql="sql/create_news_records.sql",
+        sql=migration_sql("create_news_records.sql"),
     )
 
-    create_news_records_temp = SQLExecuteQueryOperator(
-        task_id="create_news_records_temp",
+    create_news_records_staging = SQLExecuteQueryOperator(
+        task_id="create_news_records_staging",
         conn_id=POSTGRES_CONN_ID,
-        sql="sql/create_news_records_temp.sql",
+        sql=migration_sql("create_news_records_staging.sql"),
+        split_statements=True,
     )
 
     merge_news_records = SQLExecuteQueryOperator(
         task_id="merge_news_records",
         conn_id=POSTGRES_CONN_ID,
-        sql="sql/merge_records.sql",
+        sql=migration_sql("merge_records.sql"),
+        parameters={"run_id": "{{ run_id }}"},
+        split_statements=True,
     )
 
     @task
-    def fetch_live_sources() -> list[str]:
+    def extract_live_sources() -> dict[str, object]:
+        """Extract configured live sources for the current Airflow run."""
+        from news_ingestion.composition import extract_live_sources as run_extraction
         from news_ingestion.logging_config import configure_logging
-        from news_ingestion.pipeline import fetch_live_sources as run_fetch_live_sources
 
         configure_logging()
         context = get_current_context()
-        return [str(path) for path in run_fetch_live_sources(context["run_id"])]
+        return run_extraction(context["run_id"]).to_serializable_dict()
 
     @task
-    def transform_live_sources() -> str:
+    def transform_live_sources(extraction: dict[str, object]) -> str:
+        """Transform live raw outputs for the current Airflow run."""
+        from news_ingestion.composition import (
+            transform_live_run as run_transform_live_run,
+        )
         from news_ingestion.logging_config import configure_logging
-        from news_ingestion.pipeline import transform_live_run as run_transform_live_run
 
         configure_logging()
+        artifact_paths = extraction.get("artifact_paths")
+        if not isinstance(artifact_paths, list) or not all(
+            isinstance(path, str) for path in artifact_paths
+        ):
+            msg = "Extraction result contains invalid artifact paths."
+            raise TypeError(msg)
         context = get_current_context()
-        return str(run_transform_live_run(context["run_id"]))
+        result = run_transform_live_run(
+            [Path(path) for path in artifact_paths], context["run_id"]
+        )
+        return str(result.artifact_path)
 
     @task
-    def load_processed_records(processed_records_path: str) -> int:
-        from news_ingestion.database import load_processed_records_to_temp
+    def load_processed_records_to_staging(processed_records_path: str) -> int:
+        """Load processed records into the staging database table."""
         from news_ingestion.logging_config import configure_logging
+        from news_ingestion.services.loading import load_processed_records_to_staging
 
         configure_logging()
         postgres_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
         conn = postgres_hook.get_conn()
-        return load_processed_records_to_temp(Path(processed_records_path), conn)
+        context = get_current_context()
+        return load_processed_records_to_staging(
+            Path(processed_records_path), conn, run_id=context["run_id"]
+        )
 
-    extract = fetch_live_sources()
-    transform = transform_live_sources()
-    load = load_processed_records(transform)  # ty: ignore[invalid-argument-type]
+    extract = extract_live_sources()
+    transform = transform_live_sources(extract)  # ty: ignore[invalid-argument-type]
+    load = load_processed_records_to_staging(transform)  # ty: ignore[invalid-argument-type]
 
-    [create_news_records, create_news_records_temp] >> extract >> transform
+    create_news_records >> create_news_records_staging >> extract >> transform
     load >> merge_news_records
 
 

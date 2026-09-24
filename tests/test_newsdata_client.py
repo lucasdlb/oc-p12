@@ -1,7 +1,7 @@
 import pytest
 import requests
 
-from news_ingestion.newsdata_client import NewsDataClient
+from news_ingestion.clients.newsdata import NewsDataClient
 
 
 def test_fetch_articles_uses_explicit_client_config(monkeypatch):
@@ -27,7 +27,7 @@ def test_fetch_articles_uses_explicit_client_config(monkeypatch):
         calls.append({"url": url, "params": params, "timeout": timeout})
         return Response()
 
-    monkeypatch.setattr("news_ingestion.newsdata_client.requests.get", fake_get)
+    monkeypatch.setattr("news_ingestion.clients.http.requests.get", fake_get)
 
     client = NewsDataClient(
         api_key="pub_test_key",
@@ -45,7 +45,7 @@ def test_fetch_articles_uses_explicit_client_config(monkeypatch):
     articles = client.fetch_articles()
 
     assert len(articles) == 1
-    assert articles[0].extracted_from == "newsdata.io"
+    assert articles[0].extracted_from == "newsdata"
     assert articles[0].raw_payload["article_id"] == "article-1"
     assert calls == [
         {
@@ -66,7 +66,7 @@ def test_fetch_articles_wraps_newsdata_http_errors(monkeypatch):
     def fake_get(url, params, timeout):
         raise requests.Timeout("timed out")
 
-    monkeypatch.setattr("news_ingestion.newsdata_client.requests.get", fake_get)
+    monkeypatch.setattr("news_ingestion.clients.http.requests.get", fake_get)
 
     client = NewsDataClient(
         api_key="pub_test_key",
@@ -113,9 +113,9 @@ def test_fetch_articles_can_validate_image_urls(monkeypatch):
     def fake_image_check(image_url):
         return image_url == "https://example.com/image.jpg"
 
-    monkeypatch.setattr("news_ingestion.newsdata_client.requests.get", fake_get)
+    monkeypatch.setattr("news_ingestion.clients.http.requests.get", fake_get)
     monkeypatch.setattr(
-        "news_ingestion.newsdata_client.is_accessible_image_url",
+        "news_ingestion.clients.normalization.check_image_url_accessibility",
         fake_image_check,
     )
 
@@ -135,3 +135,20 @@ def test_fetch_articles_can_validate_image_urls(monkeypatch):
     articles = client.fetch_articles()
 
     assert [article.article_id for article in articles] == ["article-1"]
+
+
+def test_empty_retry_schedule_is_preserved():
+    client = NewsDataClient(
+        api_key="pub_test_key",
+        base_url="https://newsdata.example/news",
+        query="climate change",
+        language="en",
+        category="environment",
+        country=None,
+        max_pages=1,
+        only_with_images=False,
+        validate_image_urls=False,
+        retry_backoff_seconds=[],
+    )
+
+    assert client.retry_backoff_seconds == []

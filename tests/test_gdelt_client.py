@@ -1,7 +1,7 @@
 import pytest
 import requests
 
-from news_ingestion.gdelt_client import GdeltClient
+from news_ingestion.clients.gdelt import GdeltClient
 
 
 def test_fetch_articles_uses_gdelt_config_and_maps_multimodal_records(monkeypatch):
@@ -43,7 +43,7 @@ def test_fetch_articles_uses_gdelt_config_and_maps_multimodal_records(monkeypatc
         calls.append({"url": url, "params": params, "timeout": timeout})
         return Response()
 
-    monkeypatch.setattr("news_ingestion.gdelt_client.requests.get", fake_get)
+    monkeypatch.setattr("news_ingestion.clients.http.requests.get", fake_get)
 
     client = GdeltClient(
         base_url="https://api.gdelt.example/doc",
@@ -117,8 +117,8 @@ def test_fetch_articles_retries_transient_gdelt_errors(monkeypatch):
             return Response(429)
         return Response(200)
 
-    monkeypatch.setattr("news_ingestion.gdelt_client.requests.get", fake_get)
-    monkeypatch.setattr("news_ingestion.gdelt_client.time.sleep", sleeps.append)
+    monkeypatch.setattr("news_ingestion.clients.http.requests.get", fake_get)
+    monkeypatch.setattr("news_ingestion.clients.http.time.sleep", sleeps.append)
 
     client = GdeltClient(
         base_url="https://api.gdelt.example/doc",
@@ -158,8 +158,8 @@ def test_fetch_articles_uses_retry_after_header(monkeypatch):
         calls.append({"url": url, "params": params, "timeout": timeout})
         return Response()
 
-    monkeypatch.setattr("news_ingestion.gdelt_client.requests.get", fake_get)
-    monkeypatch.setattr("news_ingestion.gdelt_client.time.sleep", sleeps.append)
+    monkeypatch.setattr("news_ingestion.clients.http.requests.get", fake_get)
+    monkeypatch.setattr("news_ingestion.clients.http.time.sleep", sleeps.append)
 
     client = GdeltClient(
         base_url="https://api.gdelt.example/doc",
@@ -199,8 +199,8 @@ def test_fetch_articles_does_not_retry_non_transient_gdelt_errors(monkeypatch):
         calls.append({"url": url, "params": params, "timeout": timeout})
         return Response()
 
-    monkeypatch.setattr("news_ingestion.gdelt_client.requests.get", fake_get)
-    monkeypatch.setattr("news_ingestion.gdelt_client.time.sleep", sleeps.append)
+    monkeypatch.setattr("news_ingestion.clients.http.requests.get", fake_get)
+    monkeypatch.setattr("news_ingestion.clients.http.time.sleep", sleeps.append)
 
     client = GdeltClient(
         base_url="https://api.gdelt.example/doc",

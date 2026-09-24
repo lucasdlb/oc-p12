@@ -13,7 +13,7 @@ RUN apt-get update && \
     mv /root/.local/bin/uv /usr/local/bin/uv
 
 COPY pyproject.toml uv.lock README.md ./
-RUN uv export --format requirements-txt --no-dev --no-emit-project --locked > requirements.txt && \
+RUN uv export --format requirements-txt --no-dev --extra dashboard --no-emit-project --locked > requirements.txt && \
     uv pip install --system --no-cache -r requirements.txt
 
 COPY src ./src

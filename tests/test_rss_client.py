@@ -1,7 +1,9 @@
 import sys
 from types import SimpleNamespace
 
-from news_ingestion.rss_client import RssClient
+import pytest
+
+from news_ingestion.clients.rss import RssClient
 
 
 def test_fetch_articles_maps_rss_entries_and_filters_images(monkeypatch):
@@ -91,3 +93,40 @@ def test_fetch_articles_skips_failed_rss_feed(monkeypatch):
 
     assert len(articles) == 1
     assert articles[0].article_id == "entry-1"
+
+
+def test_fetch_articles_raises_when_all_rss_feeds_fail(monkeypatch):
+    def fake_parse(feed_url):
+        raise RuntimeError(f"bad feed: {feed_url}")
+
+    monkeypatch.setitem(sys.modules, "feedparser", SimpleNamespace(parse=fake_parse))
+    client = RssClient(
+        feeds=["https://example.com/bad.xml"],
+        max_records_per_feed=10,
+        only_with_images=True,
+        validate_image_urls=False,
+    )
+
+    with pytest.raises(RuntimeError, match="All configured RSS feeds failed"):
+        client.fetch_articles()
+
+
+def test_rss_mapping_uses_first_nonempty_fallback():
+    client = RssClient([], 1, only_with_images=False, validate_image_urls=False)
+
+    article = client._raw_article_from_entry(
+        {
+            "id": "   ",
+            "guid": "fallback-id",
+            "title": "Title",
+            "summary": "   ",
+            "description": "Fallback description",
+            "updated": "2026-09-23",
+        },
+        "https://example.com/feed.xml",
+        "Example",
+    )
+
+    assert article.article_id == "fallback-id"
+    assert article.description == "Fallback description"
+    assert article.published_at == "2026-09-23"

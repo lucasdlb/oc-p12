@@ -5,13 +5,32 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "pydantic-settings>=2.12.0",
+]
+
+[project.optional-dependencies]
+ingestion = [
+    "datasets>=4.0.0",
+    "feedparser>=6.0.12",
+    "requests>=2.32.5",
+]
+database = [
+    "psycopg[binary]>=3.2",
+]
+dashboard = [
+    "psycopg[binary]>=3.2",
+    "streamlit>=1.64.0",
+]
+airflow = [
+    "apache-airflow-providers-postgres>=7.0.2",
     "datasets>=4.0.0",
     "feedparser>=6.0.12",
     "psycopg[binary]>=3.2",
-    "pydantic-settings>=2.12.0",
     "requests>=2.32.5",
-    "streamlit>=1.64.0",
 ]
+
+[project.scripts]
+news-ingestion = "news_ingestion.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -23,7 +42,6 @@ packages = ["src/news_ingestion"]
 [dependency-groups]
 dev = [
     "apache-airflow==3.3.1",
-    "apache-airflow-providers-postgres>=7.0.2",
     "pre-commit>=4.6.2",
     "pytest>=9.1.1",
     "ruff>=0.16.4",

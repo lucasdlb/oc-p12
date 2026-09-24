@@ -441,3 +441,20 @@ Single-source scripts remain strict: when a script targets one source, that sour
 ## Step 1 Conclusion
 
 The exploration identifies more than the required minimum of three relevant sources. Four sources can support multimodal extraction directly: Fakeddit, NewsData.io, GDELT, and RSS feeds. Two additional text-only sources, Climate-FEVER and DataForGood climate misinformation RCoT, are kept because they provide valuable misinformation labels and climate-specific context. This combination balances multimodal acquisition, source diversity, current news coverage, and labelled misinformation examples for later transformation and evaluation steps.
+
+## Quantitative EDA Handoff
+
+Source qualification is complemented by the metrics produced during extraction and
+transformation. The reproducible quantitative checks are:
+
+- Record volume by `extracted_from` and `record_type`.
+- Valid-record percentage and counts by `validation_errors`.
+- Text length and word-count distributions from `text_length` and `word_count`.
+- Multimodal coverage from `is_multimodal`.
+- Article image coverage from `has_valid_image_url`.
+- Label and language distributions where those fields are available.
+
+These indicators are available in the processed-record metrics and in the Streamlit
+dashboard. They must be captured for the final sample run alongside the Airflow proof
+of execution; live-source counts are expected to vary by run and must not be treated as
+fixed dataset totals.
