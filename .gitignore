@@ -22,8 +22,9 @@ data/raw/
 data/processed/
 data/metrics/
 
-# External repos
-external/
+# External datasets
+external/*
+!external/.gitkeep
 
 # Local delivery notes
 docs/PROJECT_GUIDELINES.md

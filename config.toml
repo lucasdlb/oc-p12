@@ -43,7 +43,7 @@ splits = ["train", "test"]
 max_records = 10
 
 [fakeddit]
-enabled = true
+enabled = false
 dataset_dir = "external/Fakeddit"
 files = ["multimodal_train.tsv", "multimodal_validate.tsv", "multimodal_test.tsv"]
 max_records = 10

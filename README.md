@@ -25,6 +25,7 @@ Repository: https://github.com/lucasdlb/oc-p12
 ├── dags/                   # Airflow workflow definition
 ├── data/                   # Raw and processed JSON outputs
 ├── docs/                   # Project reports and operational documentation
+├── external/               # Optional external datasets, not versioned
 ├── src/news_ingestion/     # Clients, services, persistence, CLI, and packaged SQL
 └── tests/                  # Unit tests
 ```
@@ -33,7 +34,7 @@ Repository: https://github.com/lucasdlb/oc-p12
 
 Primary multimodal sources:
 
-- Fakeddit: labelled multimodal Reddit dataset.
+- Fakeddit: labelled multimodal Reddit dataset, optional and disabled by default because the TSV files are external data.
 - NewsData.io: live news API with article text and image URLs when available.
 - GDELT 2.1 DOC API: public article discovery API with title and social image metadata.
 - RSS feeds: public news and fact-checking feeds with text and optional media metadata.
@@ -44,6 +45,23 @@ Complementary labelled text sources:
 - DataForGood climate misinformation RCoT: climate misinformation transcript dataset.
 
 See `docs/source_exploration.md` for qualification details, risks, usage rights, and output schemas.
+
+### Optional Fakeddit Dataset
+
+Fakeddit is supported by the pipeline, but its TSV files are not versioned in this repository. To enable it, download the Fakeddit multimodal TSV files and place them here:
+
+```text
+external/Fakeddit/
+├── multimodal_train.tsv
+├── multimodal_validate.tsv
+└── multimodal_test.tsv
+```
+
+Then set `enabled = true` in the `[fakeddit]` section of `config.toml` and run:
+
+```bash
+uv run news-ingestion extract --source fakeddit
+```
 
 ## Setup
 
@@ -79,7 +97,6 @@ Or run individual extractors:
 uv run news-ingestion extract --source newsdata
 uv run news-ingestion extract --source gdelt
 uv run news-ingestion extract --source rss
-uv run news-ingestion extract --source fakeddit
 uv run news-ingestion extract --source climate-fever
 uv run news-ingestion extract --source dataforgood
 uv run news-ingestion extract --group static

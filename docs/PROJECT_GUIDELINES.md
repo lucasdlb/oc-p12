@@ -190,7 +190,6 @@ Possible tool:
 - Hugging Face Datasets
 - Kaggle
 - public-apis.io
-- FakeNewsNet dataset
 - NewsData.io API
 - Multimodal Fake News Detection: A Survey
 - Airflow Python package documentation
