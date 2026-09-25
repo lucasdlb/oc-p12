@@ -24,3 +24,6 @@ data/metrics/
 
 # External repos
 external/
+
+# Local delivery notes
+docs/PROJECT_GUIDELINES.md

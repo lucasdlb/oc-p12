@@ -2,19 +2,20 @@
 
 This project builds an automated data acquisition pipeline for multimodal fake-news detection research. It collects publications and claims from APIs, RSS feeds, and public datasets, keeps text and images linked in the same article records, transforms raw data into a documented schema, orchestrates live ETL with Airflow, and exposes quality KPIs through a dashboard.
 
+Repository: https://github.com/lucasdlb/oc-p12
+
 ## Deliverables
 
-| Requirement | Status | Location |
-| --- | --- | --- |
-| Source exploration report | Complete | `docs/source_exploration.md` |
-| Automated extraction script | Complete | `src/news_ingestion/cli.py` (`news-ingestion extract`) |
-| Transformation pipeline | Complete | `src/news_ingestion/services/transformation.py` |
-| Conceptual data schema | Complete | `docs/data_schema.md` |
-| Airflow ETL DAG | Complete | `dags/multimodal_etl.py` |
-| Database loading | Complete | `src/news_ingestion/services/loading.py`, `src/news_ingestion/persistence/postgres.py`, `src/news_ingestion/sql/`, `docs/db.md` |
-| KPI dashboard / monitoring interface | Complete | `dashboard/streamlit_app.py` |
-| Monitoring plan | Complete | `docs/monitoring_plan.md` |
-| Airflow execution evidence | To provide | Airflow UI screenshots or exported run logs |
+| Livrable | Fichiers à consulter |
+| --- | --- |
+| Rapport d'exploration de données | `docs/source_exploration.md` |
+| Scripts d'extraction automatisée | `src/news_ingestion/cli.py`, `src/news_ingestion/services/extraction.py`, `src/news_ingestion/clients/` |
+| Pipeline de transformation reproductible | `src/news_ingestion/services/transformation.py`, commande `news-ingestion transform` |
+| Schéma de données finalisé | `docs/data_schema.md` |
+| Flux ETL Airflow | `dags/multimodal_etl.py` |
+| Tableau de bord KPI de l'ETL | `dashboard/streamlit_app.py` |
+| Plan de monitoring | `docs/monitoring_plan.md` |
+| Preuves d'exécution Airflow | Captures d'écran Airflow à ajouter au rendu final |
 
 ## Project Structure
 
@@ -107,7 +108,117 @@ docker compose up -d
 
 Open Airflow at `http://localhost:8080` and run the `multimodal_news_etl` DAG. The DAG extracts live sources, transforms the run output, loads processed records into run-scoped staging, and merges them into `news_records`.
 
-Database inspection commands are documented in `docs/db.md`.
+### Airflow Execution Evidence
+
+![Airflow UI](docs/Airflow-ui.png)
+
+## Database Operations
+
+Start only the application PostgreSQL service:
+
+```bash
+docker compose up -d news-postgres
+```
+
+Start Airflow and all database services:
+
+```bash
+docker compose up -d
+```
+
+Check container status:
+
+```bash
+docker compose ps
+```
+
+Connect to the news database from the `news-postgres` container:
+
+```bash
+docker compose exec news-postgres psql -U news -d news
+```
+
+Connect from the host if port `5433` is available:
+
+```bash
+psql postgresql://news:news@localhost:5433/news
+```
+
+List tables:
+
+```sql
+\dt
+```
+
+Describe the main table:
+
+```sql
+\d news_records
+```
+
+The pipeline uses `news_records_staging`, keyed by Airflow `run_id`, while loading and merging a run. Rows for other active runs are isolated and left untouched. Both tables are shared by every run; the pipeline does not create tables per run. `news_records.record_id` is the primary key, so a record seen in a later run updates the existing row instead of creating a duplicate. After a successful merge, only the staging rows belonging to the merged run are deleted.
+
+Count loaded records:
+
+```sql
+SELECT COUNT(*) FROM news_records;
+```
+
+Count records by extraction source:
+
+```sql
+SELECT extracted_from, COUNT(*)
+FROM news_records
+GROUP BY extracted_from
+ORDER BY COUNT(*) DESC;
+```
+
+Inspect multimodal coverage:
+
+```sql
+SELECT record_type, is_multimodal, COUNT(*)
+FROM news_records
+GROUP BY record_type, is_multimodal
+ORDER BY record_type, is_multimodal;
+```
+
+Inspect recent rows:
+
+```sql
+SELECT record_id, record_type, extracted_from, source_name, is_multimodal, loaded_at
+FROM news_records
+ORDER BY loaded_at DESC
+LIMIT 5;
+```
+
+Inspect validation errors:
+
+```sql
+SELECT validation_errors, COUNT(*)
+FROM news_records
+GROUP BY validation_errors
+ORDER BY COUNT(*) DESC;
+```
+
+Stop containers while keeping volumes:
+
+```bash
+docker compose stop
+```
+
+Remove containers while keeping named volumes:
+
+```bash
+docker compose down
+```
+
+Remove containers and database volumes:
+
+```bash
+docker compose down -v
+```
+
+Use `docker compose down -v` only when the local database can be deleted.
 
 ## KPI Dashboard
 
@@ -130,6 +241,14 @@ docker compose up -d dashboard
 
 The Compose service uses `postgresql://news:news@news-postgres:5432/news` inside the Docker network and exposes the UI on `http://localhost:8501`.
 It builds from `Dockerfile.dashboard` and does not reuse the Airflow entrypoint.
+
+### Dashboard Screenshots
+
+![Database metrics](docs/Streamlit-dashboard-db-metrics.png)
+
+![Pipeline metrics](docs/Streamlit-dashboard-pipeline-metrics.png)
+
+![All pipeline metrics](docs/Streamlit-dashboard-all-pipeline-metrics.png)
 
 ## Monitoring
 
